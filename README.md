@@ -65,4 +65,3 @@ See [docs/RUNBOOK.md](docs/RUNBOOK.md) for complete step-by-step guide including
 ## License
 
 MIT
-```
