@@ -1,7 +1,6 @@
 # Runbook — Proxmox Monitoring Stack
 
-## Prometheus · Node Exporter · pve_exporter · Grafana · Alertmanager
-### Deployed via Ansible
+![Proxmox UI](screenshots/homelab_monitoring_banner.svg)
 
 ---
 
@@ -10,6 +9,8 @@
 This runbook documents the deployment of a reproducible monitoring stack for a Proxmox VE environment.
 The stack is based on a dedicated Debian 13 monitoring VM and uses native systemd services.
 All commands are validated against the target environment.
+
+![Proxmox UI](screenshots/architecture.png)
 
 ---
 
@@ -475,6 +476,8 @@ curl http://<OBS_IP>:9093/-/healthy
 http://<OBS_IP>:9090/targets
 ```
 
+![Proxmox UI](screenshots/Prom_Targets_UP.png)
+
 All four targets must show state UP:
 
 | Job | Target | Expected state |
@@ -483,8 +486,6 @@ All four targets must show state UP:
 | proxmox-node | PROXMOX_IP:9100 | UP |
 | obs-node | 127.0.0.1:9100 | UP |
 | pve-exporter | 127.0.0.1:9221 | UP |
-
-![Proxmox UI](screenshots/Targets_UP.png)
 
 ### Grafana
 
