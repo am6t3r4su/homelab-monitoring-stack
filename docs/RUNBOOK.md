@@ -484,7 +484,7 @@ All four targets must show state UP:
 | obs-node | 127.0.0.1:9100 | UP |
 | pve-exporter | 127.0.0.1:9221 | UP |
 
-![Proxmox UI](screenshots/Targets_Prometheus_UP.png)
+![Proxmox UI](screenshots/Targets_UP.png)
 
 ### Grafana
 
