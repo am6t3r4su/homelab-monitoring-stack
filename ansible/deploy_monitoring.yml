@@ -1,0 +1,220 @@
+---
+- name: Deploy Prometheus + Node Exporter + Grafana
+  hosts: monitoring
+  become: true
+
+  vars:
+    prometheus_version: "3.10.0"
+    node_exporter_version: "1.10.2"
+
+  tasks:
+
+    - name: Install base packages
+      apt:
+        name:
+          - curl
+          - wget
+          - tar
+          - ca-certificates
+          - gnupg2
+        state: present
+        update_cache: yes
+
+    - name: Create prometheus user
+      user:
+        name: prometheus
+        system: yes
+        shell: /usr/sbin/nologin
+        create_home: no
+
+    - name: Create node_exporter user
+      user:
+        name: node_exporter
+        system: yes
+        shell: /usr/sbin/nologin
+        create_home: no
+
+    - name: Create prometheus directories
+      file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: /etc/prometheus, owner: root, group: prometheus, mode: "0750" }
+        - { path: /var/lib/prometheus, owner: prometheus, group: prometheus, mode: "0750" }
+
+    - name: Download Node Exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+
+    - name: Extract Node Exporter
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Install Node Exporter binary
+      copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        mode: "0755"
+        remote_src: yes
+
+    - name: Create Node Exporter service
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=node_exporter
+          Group=node_exporter
+          Type=simple
+          ExecStart=/usr/local/bin/node_exporter
+          Restart=on-failure
+          RestartSec=5s
+          NoNewPrivileges=true
+          ProtectSystem=full
+          ProtectHome=true
+          PrivateTmp=true
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start Node Exporter
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Download Prometheus
+      get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: /tmp/prometheus.tar.gz
+
+    - name: Extract Prometheus
+      unarchive:
+        src: /tmp/prometheus.tar.gz
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Install Prometheus binaries
+      copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        mode: "0755"
+        remote_src: yes
+      loop:
+        - prometheus
+        - promtool
+
+    - name: Deploy Prometheus config
+      copy:
+        dest: /etc/prometheus/prometheus.yml
+        owner: root
+        group: prometheus
+        mode: "0640"
+        content: |
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+
+          alerting:
+            alertmanagers:
+              - static_configs:
+                  - targets:
+                      - 127.0.0.1:9093
+
+          rule_files: []
+
+          scrape_configs:
+            - job_name: prometheus
+              static_configs:
+                - targets:
+                    - 127.0.0.1:9090
+
+            - job_name: proxmox-node
+              static_configs:
+                - targets:
+                    - 172.29.25.30:9100
+
+            - job_name: obs-node
+              static_configs:
+                - targets:
+                    - 127.0.0.1:9100
+
+            - job_name: pve-exporter
+              metrics_path: /pve
+              params:
+                module: [default]
+                target: [172.29.25.30]
+              static_configs:
+                - targets:
+                    - 127.0.0.1:9221
+
+    - name: Create Prometheus service
+      copy:
+        dest: /etc/systemd/system/prometheus.service
+        content: |
+          [Unit]
+          Description=Prometheus
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=prometheus
+          Group=prometheus
+          Type=simple
+          ExecStart=/usr/local/bin/prometheus \
+            --config.file=/etc/prometheus/prometheus.yml \
+            --storage.tsdb.path=/var/lib/prometheus \
+            --web.listen-address=0.0.0.0:9090 \
+            --storage.tsdb.retention.time=30d
+          Restart=on-failure
+          RestartSec=5s
+          NoNewPrivileges=true
+          ProtectSystem=full
+          ProtectHome=true
+          PrivateTmp=true
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start Prometheus
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Add Grafana GPG key
+      shell: |
+        mkdir -p /etc/apt/keyrings
+        wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
+        chmod 644 /etc/apt/keyrings/grafana.gpg
+      args:
+        creates: /etc/apt/keyrings/grafana.gpg
+
+    - name: Add Grafana repository
+      copy:
+        dest: /etc/apt/sources.list.d/grafana.list
+        content: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main\n"
+
+    - name: Install Grafana
+      apt:
+        name: grafana
+        state: present
+        update_cache: yes
+
+    - name: Enable and start Grafana
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
