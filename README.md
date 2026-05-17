@@ -15,13 +15,7 @@ Ansible playbook and runbooks for deploying a complete monitoring stack on Proxm
 
 ## Architecture
 
-```
-Proxmox VE 9.1 (172.29.25.30)       Monitoring VM / OBS (172.29.25.29)
-├── Node Exporter :9100         →    ├── Prometheus :9090
-└── Proxmox API :8006           →    ├── pve_exporter :9221
-                                     ├── Grafana :3000
-                                     └── Alertmanager :9093
-```
+![Proxmox UI](docs/screenshots/architecture.png)
 
 ## Prerequisites
 
