@@ -15,6 +15,8 @@ All commands are validated against the target environment.
 
 ## Architecture
 
+![Proxmox UI](screenshots/Proxmox_UI_VM_OBS.png)
+
 ---
 
 ## Stack Versions
@@ -204,6 +206,8 @@ systemctl enable --now node_exporter
 systemctl status node_exporter
 ```
 
+![Proxmox UI](screenshots/node_exporter.png)
+
 ---
 
 ## 4. Proxmox API User and Token
@@ -215,6 +219,8 @@ pveum user add monitoring@pve
 pveum aclmod / -user monitoring@pve -role PVEAuditor
 pveum user token add monitoring@pve prometheus --privsep 0
 ```
+
+![Proxmox UI](screenshots/API_Token.png)
 
 ### Risk zone — Token value
 
@@ -461,6 +467,8 @@ curl "http://<OBS_IP>:9221/pve?target=<PROXMOX_IP>&module=default" | grep pve_up
 curl http://<OBS_IP>:9093/-/healthy
 ```
 
+![Proxmox UI](screenshots/services_actifs_OBS.png)
+
 ### Prometheus targets
 
 ```
@@ -475,6 +483,8 @@ All four targets must show state UP:
 | proxmox-node | PROXMOX_IP:9100 | UP |
 | obs-node | 127.0.0.1:9100 | UP |
 | pve-exporter | 127.0.0.1:9221 | UP |
+
+![Proxmox UI](screenshots/Targets_Prometheus_UP.png)
 
 ### Grafana
 
@@ -491,6 +501,8 @@ Add Prometheus as data source:
 Import dashboards:
 - ID `1860` — Node Exporter Full
 - ID `10347` — Proxmox via Prometheus
+
+![Proxmox UI](screenshots/Dashboard_Grafana_Node_Exporter.png)
 
 ---
 
